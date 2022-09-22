@@ -1,0 +1,260 @@
+---
+title: "BellaBeat Case Study"
+author: "Caluori"
+date: "2022-09-10"
+output:
+  html_document: default
+  md_document:
+    variant: markdown_strict+backtick_code_blocks+autolink_bare_uris
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Case Study : BellaBeat
+
+## 1. Case Summary
+
+This is part of the Capstone Project for the Google Data Analytics Professional Certificate
+
+## 2. Business Task
+
+Analyze smart device usage data in order to gain insight into how consumers use non-Bellabeat smart devices and apply insights to a Bellabeat product
+
+## 3. Prepare: Data Integrity
+
+### 3.1 Data set used:
+
+dataset used during the analysis can be found on Kaggle through the user Mobius using [this link](https://www.kaggle.com/datasets/arashnic/fitbit)
+
+### 3.2 Data Privacy:
+
+The data is identified as open-source The dataset is published under the CC0: Public Domain license. This data can be used freely for our analysis without asking for permission.
+
+
+## 4. Process: Data Cleaning & Manipulation
+
+
+
+## 4.1 Loading packages
+
+With the options message=FALSE and warning=FALSE, to save space. And to prevent printing of the execution of the R code generated and the warning messages.
+
+```{r Install Packages, message=FALSE, warning=FALSE, paged.print=FALSE}
+r = getOption("repos")
+r["CRAN"] = "http://cran.us.r-project.org"
+options(repos = r)
+
+install.packages("tidyverse")
+install.packages("lubridate")
+install.packages("dplyr")
+install.packages("ggplot2")
+install.packages("tidyr")
+install.packages("here")
+install.packages("skimr")
+install.packages("janitor")
+install.packages("ggpubr")
+install.packages("stringr")
+```
+
+## 4.2 Loading Library
+
+```{r Library, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(here)
+library(skimr)
+library(janitor)
+library(ggpubr)
+library("stringr")
+library(data.table)
+```
+
+## 4.3 Importing dataset
+
+
+
+```{r Import Dataset, message=FALSE, warning=FALSE}
+DailyActivity <- read_csv("dailyActivity_merged.csv")
+heartrate <- read_csv("heartrate_seconds_merged.csv")
+Steps <- read_csv("hourlySteps_merged.csv")
+Calories <- read_csv("hourlyCalories_merged.csv")
+Intensities <- read_csv("hourlyIntensities_merged.csv")
+sleepDay <- read_csv("sleepDay_merged.csv")
+weightLog <- read_csv("weightLogInfo_merged.csv")
+
+```
+
+## 4.4 Review Structure of the data
+
+```{r Head Function}
+head(DailyActivity)
+head(heartrate)
+head(Steps)
+head(Calories)
+head(Intensities)
+head(sleepDay)
+head(weightLog)
+```
+
+```{r Colnames()}
+colnames(DailyActivity)
+colnames(heartrate)
+colnames(Steps)
+colnames(Calories)
+colnames(Intensities)
+colnames(sleepDay)
+colnames(weightLog)
+```
+```{r Glimpse()}
+glimpse(DailyActivity)
+glimpse(heartrate)
+glimpse(Steps)
+glimpse(Calories)
+glimpse(Intensities)
+glimpse(sleepDay)
+glimpse(weightLog)
+```
+
+
+
+## 4.5 Data Clean up:
+
+```{r Check for duplicates }
+# Are there duplicates?
+sum(duplicated(DailyActivity))
+sum(duplicated(heartrate))
+sum(duplicated(Steps))
+sum(duplicated(Calories))
+sum(duplicated(Intensities))
+sum(duplicated(sleepDay))
+sum(duplicated(weightLog))
+
+```
+```{r Remove duplicated rows from SleepDay}
+
+sleepDay <- distinct(sleepDay, Id, SleepDay, .keep_all = TRUE)
+sum(duplicated(sleepDay))
+
+```
+
+
+```{r Nulls in Activity}
+# Are there nulls?
+sum(is.na(DailyActivity))
+sum(is.na(heartrate))
+sum(is.na(Steps))
+sum(is.na(Calories))
+sum(is.na(Intensities))
+sum(is.na(sleepDay))
+sum(is.na(weightLog))
+
+```
+## Parse dates
+```{r Parse dates - Intensities}
+Intensities$ActivityDay=as.Date(Intensities$ActivityHour, format="%m/%d/%Y %H:%M:%S", tz=Sys.timezone())
+Intensities$ActivityHour= str_sub(Intensities$ActivityHour, - 11, - 1)
+glimpse(Intensities)
+```
+
+```{r Parse dates - Heart Rate}
+heartrate$Day=as.Date(heartrate$Time, format="%m/%d/%Y %H:%M:%S", tz=Sys.timezone())
+heartrate$Time= str_sub(heartrate$Time, - 10, - 1)
+
+glimpse(heartrate)
+```
+```{r message=FALSE, warning=FALSE}
+## sleepDay$sleepDay=as.Date(sleepDay$Time, format="%m/%d/%Y %H:%M:%S", tz=Sys.timezone())
+
+
+glimpse(sleepDay)
+```
+
+
+
+## 4.6 Summarizing the dataset
+
+### total number of participants in each data sets:
+
+```{r n_distinct for ID in each table}
+DailyActivity %>%
+  summarise(Activity_participants = n_distinct(DailyActivity$Id))
+n_distinct(Calories$Id)
+n_distinct(Intensities$Id)
+n_distinct(Steps$Id)
+n_distinct(sleepDay$Id)
+n_distinct(heartrate$Id)
+n_distinct(weightLog$Id)
+
+```
+
+```{r}
+summary(DailyActivity)
+```
+
+
+### 4.7 calulate how many days each person/per table
+
+
+
+```{r}
+heartratedf <-heartrate %>%
+distinct(Id,Day) %>%
+group_by(Id) %>%
+summarize("Id" <- n())
+names(heartratedf)[2] = 'Tot_days'
+```
+
+
+```{r}
+Intensitiesdf <-Intensities %>%
+distinct(Id,ActivityDay) %>%
+group_by(Id) %>%
+summarize("Id" <- n())
+names(Intensitiesdf)[2] = 'Tot_days'
+```
+
+
+```{r}
+Sleepdf <-sleepDay %>%
+distinct(Id,date) %>%
+group_by(Id) %>%
+summarize("Id" <- n())
+names(Sleepdf)[2] = 'Tot_days'
+```
+
+
+
+## % Differnce in datasets
+
+```{r % Diff of each dataset}
+n_distinct(sleepDay$Id)/n_distinct(DailyActivity$Id)
+n_distinct(heartrate$Id)/n_distinct(DailyActivity$Id)
+n_distinct(weightLog$Id)/n_distinct(DailyActivity$Id)
+```
+
+## 5. Analyze: Data Analysis - charts
+
+
+```{r}
+ggplot(data=DailyActivity, aes(x=TotalSteps, y=SedentaryMinutes)) + geom_point() + geom_smooth() + labs(title="Total Steps vs Sedentary Minutes")
+geom_smooth(formula = y ~ x, method = "lm")
+
+```
+
+
+```{r echo=FALSE, paged.print=TRUE}
+
+barplot(heartratedf$Tot_days, names.arg=c(seq(1:14)), col="#69b3a2")
+mtext("Heart Rate Participants", cex = 2, side = 2, col = "red", line = 2)
+barplot(Sleepdf$Tot_days, names.arg=c(seq(1:24)), col="#69b3a2")
+mtext("Sleep Participants", cex = 2, side = 2, col = "red", line = 2)
+barplot(Intensitiesdf$Tot_days, names.arg=c(seq(1:33)), col="#69b3a2") 
+mtext("Intensities Participants", cex = 2, side = 2, col = "red", line = 2)
+  
+```
+## See BellaBeat-Case-Study powerpint for detail analysis and recommendations
